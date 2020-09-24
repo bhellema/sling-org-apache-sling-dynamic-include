@@ -57,33 +57,35 @@ If component do not generate HTML but eg. JS or binary data then remember to tur
 
 ## Enabling SSI in Apache & dispatcher
 
-In order to enable SSI in Apache with dispatcher first enable `Include` mod (on Debian: `a2enmod include`). Then add `Includes` option to the `Options` directive in your virtual configuration host. After that find following lines in `dispatcher.conf` file:
+To enable SSI in Apache with dispatcher, first enable `Include` mod (on Debian: `a2enmod include`). Then add the `Includes` option to the `Options` directive in your virtual configuration host. After that find the following lines in `dispatcher.conf` file:
 
         <IfModule dispatcher_module>
             SetHandler dispatcher-handler
         </IfModule>
 
-and modify it:
+modify it to include `SetOutputFilter INCLUDES`: 
 
         <IfModule dispatcher_module>
             SetHandler dispatcher-handler
         </IfModule>
         SetOutputFilter INCLUDES
 
-After setting output filter open virtualhost configuration and add `Includes` option to `Options` directive:
+After setting the SetOutputFilter value, find the virtualhost configuration and add `IncludesNOEXEC` option to `Options` directive:
 
         <Directory />
-            Options FollowSymLinks Includes
+            Options FollowSymLinks IncludesNOEXEC
             AllowOverride None
         </Directory>
         <Directory /var/www/>
-            Options Indexes FollowSymLinks MultiViews Includes
+            Options Indexes FollowSymLinks MultiViews IncludesNOEXEC
             AllowOverride None
             Order allow,deny
             allow from all
         </Directory>
+        
+By specifying the IncludesNOEXEC only documents with a text MIME-type will be included.
 
-It's also a good idea to disable the caching for `.nocache.html` files in `dispatcher.any` config file. Just add:
+It's also a good idea to disable the caching for `.nocache.html` files in `dispatcher.any` config file. Modify the dispatcher.any file to include the glob for the `nocache` selector. Add a new rule to the end of the `/rules` section with the following:
 
         /disable-nocache
         {
@@ -91,19 +93,14 @@ It's also a good idea to disable the caching for `.nocache.html` files in `dispa
             /type "deny"
         }
 
-at the end of the `/rules` section.
-
 ## Enabling TTL in dispatcher 4.1.11+
-In order to enable TTL on Apache with dispatcher just add:
+In order to enable TTL modify the dispatcher.any configuration and enable TTL by setting the value to `1`.  You may need to uncomment the setting in dispatcher.any to activate this setting.
 
 	/enableTTL "1"
 
-to your dispatcher configuration.
-
-
 ## Enabling ESI in Varnish
 
-Just add following lines at the beginning of the `vcl_fetch` section in `/etc/varnish/default.vcl` file:
+To enable ESI includes for `.html` files and disable caching of the `.nocache.html` files, add following lines at the beginning of the `vcl_fetch` section in `/etc/varnish/default.vcl` file:
 
         if(req.url ~ "\.nocache.html") {
             set beresp.ttl = 0s;
@@ -111,11 +108,9 @@ Just add following lines at the beginning of the `vcl_fetch` section in `/etc/va
             set beresp.do_esi = true;
         }
 
-It'll enable ESI includes in `.html` files and disable caching of the `.nocache.html` files.
-
 ## JavaScript Include
 
-Dynamic Include Filter can also replace dynamic components with AJAX tags, so they are loaded by the browser. It's called JSI. In the current version jQuery framework is used. More attention is required if included component has some Javascript code. Eg. Geometrixx Carousel component won't work because it's initialization is done in page `<head>` section while the component itself is still not loaded.
+Dynamic Include Filter can also replace dynamic components with AJAX tags, such that they are loaded by the browser, this is called JSI.  In the current version, jQuery is used to perform the dynamic replacement. More attention is required if the included component has some Javascript code. Eg. Geometrixx Carousel component won't work because it's initialization is done in page `<head>` section while the component itself is still not loaded.
 
 ## Plain and synthetic resources
 
@@ -123,7 +118,7 @@ There are two cases: the first involves including a component which is available
 
     /content/geometrixx/en/jcr:content/carousel.html
 
-In this case, component is replaced with include tag, and `nocache` selector is added
+In this case, the component is replaced with include tag, and `nocache` selector is added.
 
     <!--#include virtual="/content/geometrixx/en/jcr:content/carousel.nocache.html" -->
     
